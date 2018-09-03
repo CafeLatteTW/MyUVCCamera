@@ -292,7 +292,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 		}
 	};
 
-	/*private final Runnable mUpdateImageTask = new Runnable() {
+	private final Runnable mUpdateImageTask = new Runnable() {
 		@Override
 		public void run() {
 			synchronized (bitmap) {
@@ -300,5 +300,5 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 				Log.d("OnFrame","333333" );
 			}
 		}
-	};*/
+	};
 }
