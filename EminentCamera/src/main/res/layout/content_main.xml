@@ -21,12 +21,12 @@
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ImageButton
+    <android.support.v7.widget.AppCompatImageButton
         android:id="@+id/cameraButton"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:contentDescription="@string/camera"
-        android:scaleType="centerInside"
+        android:scaleType="centerCrop"
         app:srcCompat="@android:drawable/ic_menu_camera" />
 
     <!--<TextureView-->
