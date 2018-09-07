@@ -1,9 +1,11 @@
-package com.implement.leo.widget;
+package com.eminent.widget;
 
 import android.content.Context;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.TextureView;
+import android.graphics.drawable.Drawable;
 
 /**
  * Created by 02006 on 2018/8/29.
@@ -28,6 +30,13 @@ implements AspectRatioViewInterface{
 
     public SimpleCameraTextureView(final Context context, final AttributeSet attrs, final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+    }
+
+    @Override
+    public void setBackgroundDrawable( Drawable background ) {
+        if ( Build.VERSION.SDK_INT < Build.VERSION_CODES.N && background != null ) {
+            setBackgroundDrawable( background );
+        }
     }
 
     @Override

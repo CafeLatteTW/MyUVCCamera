@@ -1,36 +1,31 @@
 package com.implement.leo.eminentcamera;
 
-import android.graphics.Bitmap;
-import android.graphics.SurfaceTexture;
-import android.hardware.usb.UsbDevice;
+import android.content.Context;
+import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Surface;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import com.implement.leo.widget.SimpleCameraTextureView;
+import com.eminent.usb.UsbCameraAdaptor;
 import com.serenegiant.common.BaseActivity;
-import com.serenegiant.usb.CameraDialog;
-import com.serenegiant.usb.IButtonCallback;
-import com.serenegiant.usb.IFrameCallback;
-import com.serenegiant.usb.IStatusCallback;
 import com.serenegiant.usb.USBMonitor;
-import com.serenegiant.usb.USBMonitor.OnDeviceConnectListener;
-import com.serenegiant.usb.USBMonitor.UsbControlBlock;
 import com.serenegiant.usb.UVCCamera;
+
+import com.eminent.usb.a3d.A3DAdaptor;
+import com.eminent.widget.SimpleCameraTextureView;
 
 import java.nio.ByteBuffer;
 
-
-//public class MainActivity extends AppCompatActivity {
-public final class MainActivity extends BaseActivity implements CameraDialog.CameraDialogParent {
-
+public final class MainActivity extends BaseActivity implements UsbCameraAdaptor.FrameProcessor {
     private final Object mSync = new Object();
     // for accessing USB and USB camera
     private USBMonitor mUSBMonitor;
@@ -39,6 +34,11 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
     // for open&start / stop&close camera preview
     private ImageButton mCameraButton;
     private Surface mPreviewSurface;
+    private EditText mEdIntT;
+
+    private A3DAdaptor mA3dAdaptor;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,20 +48,34 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
         mCameraButton = findViewById(R.id.cameraButton);
         mCameraButton.setOnClickListener(mOnClickListener);
         mUVCCameraView = findViewById(R.id.simpleCameraView);
-        mUVCCameraView.setAspectRatio(UVCCamera.DEFAULT_PREVIEW_WIDTH / (float)UVCCamera.DEFAULT_PREVIEW_HEIGHT);
-        mUSBMonitor = new USBMonitor(this, mOnDeviceConnectListener);
-
-//        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-//        setSupportActionBar(toolbar);
-
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        mEdIntT = findViewById(R.id.edIntT);
+        mEdIntT.setOnKeyListener(new View.OnKeyListener() {
             @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+            public boolean onKey(View view, int i, KeyEvent keyEvent) {
+                if(mA3dAdaptor != null) {
+                    if (keyEvent.getAction() == KeyEvent.ACTION_UP && i == 66) {
+                        Log.d("OnKey", mEdIntT.getText().toString());
+                        int valueIntT = Integer.parseInt(mEdIntT.getText().toString());
+                        valueIntT = Math.min(10, Math.max(0, valueIntT));
+                        mA3dAdaptor.setIntegrationTime((float) (valueIntT / 10.0));
+                        mEdIntT.setText(String.valueOf(valueIntT));
+                    }
+                }
+//                switch (keyEvent.getAction()) {
+//                    case KeyEvent.ACTION_UP:             //键盘松开
+//                        Log.d("KeyUp", String.valueOf(i));
+//                        break;
+//                    case KeyEvent.ACTION_DOWN:          //键盘按下
+//                        Log.d("KeyDown", String.valueOf(i));
+//                        break;
+//                }
+
+                return false;
             }
         });
+
+        mA3dAdaptor = new A3DAdaptor(this, this.getUsbManager(), this.getUVCCameraTextureView(), this);
+
     }
 
     @Override
@@ -89,230 +103,72 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
     @Override
     protected void onStart() {
         super.onStart();
-        mUSBMonitor.register();
-        synchronized (mSync) {
-            if (mUVCCamera != null) {
-                mUVCCamera.startPreview();
-            }
-        }
+        mA3dAdaptor.start();
     }
 
     @Override
     protected void onStop() {
-        synchronized (mSync) {
-            if (mUVCCamera != null) {
-                mUVCCamera.stopPreview();
-            }
-            if (mUSBMonitor != null) {
-                mUSBMonitor.unregister();
-            }
-        }
         super.onStop();
+        mA3dAdaptor.stop();
     }
 
     @Override
     protected void onDestroy() {
-        synchronized (mSync) {
-            releaseCamera();
-            if (mToast != null) {
-                mToast.cancel();
-                mToast = null;
-            }
-            if (mUSBMonitor != null) {
-                mUSBMonitor.destroy();
-                mUSBMonitor = null;
-            }
-        }
-        mUVCCameraView = null;
-        mCameraButton = null;
         super.onDestroy();
+        mA3dAdaptor.release();
+    }
+
+    public UsbManager getUsbManager() {
+        return (UsbManager) getSystemService( Context.USB_SERVICE );
+    }
+
+    public com.eminent.widget.SimpleCameraTextureView getUVCCameraTextureView() {
+        return (SimpleCameraTextureView) findViewById( R.id.simpleCameraView );
     }
 
     private final View.OnClickListener mOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(final View view) {
             synchronized (mSync) {
-                if (mUVCCamera == null) {
-                    CameraDialog.showDialog(MainActivity.this);
-                } else {
-                    releaseCamera();
+                if ( mA3dAdaptor.requestDevicePermission( R.xml.device_filter ) ) {
+                    Toast.makeText( MainActivity.this, "USB START", Toast.LENGTH_SHORT ).show();
                 }
             }
         }
     };
 
-    private Toast mToast;
-
-    private final OnDeviceConnectListener mOnDeviceConnectListener = new OnDeviceConnectListener() {
-        @Override
-        public void onAttach(final UsbDevice device) {
-            Toast.makeText(MainActivity.this, "USB_DEVICE_ATTACHED", Toast.LENGTH_SHORT).show();
-        }
-
-        @Override
-        public void onConnect(final UsbDevice device, final UsbControlBlock ctrlBlock, final boolean createNew) {
-            releaseCamera();
-            queueEvent(new Runnable() {
-                @Override
-                public void run() {
-                    final UVCCamera camera = new UVCCamera();
-                    camera.open(ctrlBlock);
-                    camera.setFrameCallback(mIFrameCallback, UVCCamera.PIXEL_FORMAT_RGBX);
-                    camera.setStatusCallback(new IStatusCallback() {
-                        @Override
-                        public void onStatus(final int statusClass, final int event, final int selector,
-                                             final int statusAttribute, final ByteBuffer data) {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    final Toast toast = Toast.makeText(MainActivity.this, "onStatus(statusClass=" + statusClass
-                                            + "; " +
-                                            "event=" + event + "; " +
-                                            "selector=" + selector + "; " +
-                                            "statusAttribute=" + statusAttribute + "; " +
-                                            "data=...)", Toast.LENGTH_SHORT);
-                                    synchronized (mSync) {
-                                        if (mToast != null) {
-                                            mToast.cancel();
-                                        }
-                                        toast.show();
-                                        mToast = toast;
-                                    }
-                                }
-                            });
-                        }
-                    });
-                    camera.setButtonCallback(new IButtonCallback() {
-                        @Override
-                        public void onButton(final int button, final int state) {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    final Toast toast = Toast.makeText(MainActivity.this, "onButton(button=" + button + "; " +
-                                            "state=" + state + ")", Toast.LENGTH_SHORT);
-                                    synchronized (mSync) {
-                                        if (mToast != null) {
-                                            mToast.cancel();
-                                        }
-                                        mToast = toast;
-                                        toast.show();
-                                    }
-                                }
-                            });
-                        }
-                    });
-//					camera.setPreviewTexture(camera.getSurfaceTexture());
-                    if (mPreviewSurface != null) {
-                        mPreviewSurface.release();
-                        mPreviewSurface = null;
-                    }
-                    try {
-//						camera.setPreviewSize(UVCCamera.DEFAULT_PREVIEW_WIDTH, UVCCamera.DEFAULT_PREVIEW_HEIGHT, UVCCamera.FRAME_FORMAT_MJPEG);
-                        camera.setPreviewSize(UVCCamera.DEFAULT_PREVIEW_WIDTH, UVCCamera.DEFAULT_PREVIEW_HEIGHT, 1,60,UVCCamera.FRAME_FORMAT_MJPEG,UVCCamera.DEFAULT_BANDWIDTH);
-                    } catch (final IllegalArgumentException e) {
-                        // fallback to YUV mode
-                        try {
-                            camera.setPreviewSize(UVCCamera.DEFAULT_PREVIEW_WIDTH, UVCCamera.DEFAULT_PREVIEW_HEIGHT, UVCCamera.DEFAULT_PREVIEW_MODE);
-                        } catch (final IllegalArgumentException e1) {
-                            camera.destroy();
-                            return;
-                        }
-                    }
-                    final SurfaceTexture st = mUVCCameraView.getSurfaceTexture();
-                    if (st != null) {
-                        mPreviewSurface = new Surface(st);
-                        camera.setPreviewDisplay(mPreviewSurface);
-//						camera.setFrameCallback(mIFrameCallback, UVCCamera.PIXEL_FORMAT_RGB565/*UVCCamera.PIXEL_FORMAT_NV21*/);
-                        camera.startPreview();
-                    }
-                    synchronized (mSync) {
-                        mUVCCamera = camera;
-                    }
-                }
-            }, 0);
-        }
-
-        @Override
-        public void onDisconnect(final UsbDevice device, final UsbControlBlock ctrlBlock) {
-            // XXX you should check whether the coming device equal to camera device that currently using
-            releaseCamera();
-        }
-
-        @Override
-        public void onDettach(final UsbDevice device) {
-            Toast.makeText(MainActivity.this, "USB_DEVICE_DETACHED", Toast.LENGTH_SHORT).show();
-        }
-
-        @Override
-        public void onCancel(final UsbDevice device) {
-        }
-    };
-
-    private synchronized void releaseCamera() {
-        synchronized (mSync) {
-            if (mUVCCamera != null) {
-                try {
-                    mUVCCamera.setStatusCallback(null);
-                    mUVCCamera.setButtonCallback(null);
-                    mUVCCamera.close();
-                    mUVCCamera.destroy();
-                } catch (final Exception e) {
-                    //
-                }
-                mUVCCamera = null;
-            }
-            if (mPreviewSurface != null) {
-                mPreviewSurface.release();
-                mPreviewSurface = null;
-            }
-        }
-    }
-
-    /**
-     * to access from CameraDialog
-     * @return
-     */
     @Override
-    public USBMonitor getUSBMonitor() {
-        return mUSBMonitor;
+    public void processImageFrame( ByteBuffer frame ) {
+        // TODO: 2018/9/7  
+
+
     }
 
-    @Override
-    public void onDialogResult(boolean canceled) {
-        if (canceled) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    // FIXME
-                }
-            }, 0);
-        }
-    }
-
-    // if you need frame data as byte array on Java side, you can use this callback method with UVCCamera#setFrameCallback
-    // if you need to create Bitmap in IFrameCallback, please refer following snippet.
-    final Bitmap bitmap = Bitmap.createBitmap(UVCCamera.DEFAULT_PREVIEW_WIDTH, UVCCamera.DEFAULT_PREVIEW_HEIGHT, Bitmap.Config.ARGB_8888);
-    private final IFrameCallback mIFrameCallback = new IFrameCallback() {
-        @Override
-        public void onFrame(final ByteBuffer frame) {
-            frame.clear();
-//            Log.d("OnFrame","111111" );
-            synchronized (bitmap) {
-                bitmap.copyPixelsFromBuffer(frame);
-//                Log.d("OnFrame","222222" );
-            }
+//    // if you need frame data as byte array on Java side, you can use this callback method with UVCCamera#setFrameCallback
+//    // if you need to create Bitmap in IFrameCallback, please refer following snippet.
+//    final Bitmap bitmap = Bitmap.createBitmap(UVCCamera.DEFAULT_PREVIEW_WIDTH, UVCCamera.DEFAULT_PREVIEW_HEIGHT, Bitmap.Config.ARGB_8888);
+//    private final IFrameCallback mIFrameCallback = new IFrameCallback() {
+//        @Override
+//        public void onFrame(final ByteBuffer frame) {
+//            frame.clear();
+//            synchronized (bitmap) {
+//                bitmap.copyPixelsFromBuffer(frame);
+//            }
 //			mImageView.post(mUpdateImageTask);
-
-        }
-    };
-
-    private final Runnable mUpdateImageTask = new Runnable() {
-        @Override
-        public void run() {
-            synchronized (bitmap) {
+//
+//        }
+//    };
+//
+//    private final Runnable mUpdateImageTask = new Runnable() {
+//        @Override
+//        public void run() {
+//            synchronized (bitmap) {
 //				mImageView.setImageBitmap(bitmap);
-                Log.d("OnFrame","333333" );
-            }
-        }
-    };
+//            }
+//        }
+//    };
+
+    public A3DAdaptor getA3DAdaptor() {
+        return mA3dAdaptor;
+    }
 }

@@ -8,18 +8,13 @@
     tools:context="com.implement.leo.eminentcamera.MainActivity"
     tools:showIn="@layout/activity_main">
 
-    <!--<com.implement.leo.widget.SimpleCameraTextureView-->
-    <!--android:id="@+id/CameraTextureView1"-->
-    <!--android:layout_width="match_parent"-->
-    <!--android:layout_height="match_parent"-->
-    <!--android:layout_gravity="center"-->
-    <!--android:background="#ff000000" />-->
 
-    <com.implement.leo.widget.SimpleCameraTextureView
+    <com.eminent.widget.SimpleCameraTextureView
         android:id="@+id/simpleCameraView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="0dp" />
 
     <android.support.v7.widget.AppCompatImageButton
         android:id="@+id/cameraButton"
@@ -27,13 +22,18 @@
         android:layout_height="48dp"
         android:contentDescription="@string/camera"
         android:scaleType="centerCrop"
+        app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@android:drawable/ic_menu_camera" />
 
-    <!--<TextureView-->
-    <!--android:id="@+id/textureView"-->
-    <!--android:layout_width="wrap_content"-->
-    <!--android:layout_height="wrap_content"-->
-    <!--android:layout_marginTop="60dp"-->
-    <!--app:layout_constraintTop_toTopOf="parent" />-->
+    <EditText
+        android:id="@+id/edIntT"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="44dp"
+        android:ems="10"
+        android:inputType="number"
+        android:textColor="@color/BLUE"
+        app:layout_constraintStart_toEndOf="@+id/cameraButton"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </android.support.constraint.ConstraintLayout>
