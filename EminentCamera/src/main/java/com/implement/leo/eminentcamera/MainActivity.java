@@ -3,16 +3,12 @@ package com.implement.leo.eminentcamera;
 import android.content.Context;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.util.Log;
-import android.view.KeyEvent;
 import android.view.Surface;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.SeekBar;
 import android.widget.Toast;
 
 import com.eminent.usb.UsbCameraAdaptor;
@@ -34,7 +30,7 @@ public final class MainActivity extends BaseActivity implements UsbCameraAdaptor
     // for open&start / stop&close camera preview
     private ImageButton mCameraButton;
     private Surface mPreviewSurface;
-    private EditText mEdIntT;
+    private SeekBar mSbIntT;
 
     private A3DAdaptor mA3dAdaptor;
 
@@ -48,29 +44,24 @@ public final class MainActivity extends BaseActivity implements UsbCameraAdaptor
         mCameraButton = findViewById(R.id.cameraButton);
         mCameraButton.setOnClickListener(mOnClickListener);
         mUVCCameraView = findViewById(R.id.simpleCameraView);
-        mEdIntT = findViewById(R.id.edIntT);
-        mEdIntT.setOnKeyListener(new View.OnKeyListener() {
+        mSbIntT = findViewById(R.id.sbIntT);
+        mSbIntT.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-                if(mA3dAdaptor != null) {
-                    if (keyEvent.getAction() == KeyEvent.ACTION_UP && i == 66) {
-                        Log.d("OnKey", mEdIntT.getText().toString());
-                        int valueIntT = Integer.parseInt(mEdIntT.getText().toString());
-                        valueIntT = Math.min(10, Math.max(0, valueIntT));
-                        mA3dAdaptor.setIntegrationTime((float) (valueIntT / 10.0));
-                        mEdIntT.setText(String.valueOf(valueIntT));
-                    }
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                if(mA3dAdaptor != null && mA3dAdaptor.isCameraOn()) {
+                    int valueIntT = seekBar.getProgress();
+                    mA3dAdaptor.setIntegrationTime((float) (valueIntT / 10.0));
                 }
-//                switch (keyEvent.getAction()) {
-//                    case KeyEvent.ACTION_UP:             //键盘松开
-//                        Log.d("KeyUp", String.valueOf(i));
-//                        break;
-//                    case KeyEvent.ACTION_DOWN:          //键盘按下
-//                        Log.d("KeyDown", String.valueOf(i));
-//                        break;
-//                }
+            }
 
-                return false;
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
             }
         });
 

@@ -25,14 +25,17 @@
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@android:drawable/ic_menu_camera" />
 
-    <EditText
-        android:id="@+id/edIntT"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginStart="44dp"
-        android:ems="10"
-        android:inputType="number"
-        android:textColor="@color/BLUE"
+    <SeekBar
+        android:id="@+id/sbIntT"
+        android:layout_width="0dp"
+        android:layout_height="14dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="16dp"
+        android:max="10"
+        android:min="0"
+        android:progress="10"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/cameraButton"
         app:layout_constraintTop_toTopOf="parent" />
 
