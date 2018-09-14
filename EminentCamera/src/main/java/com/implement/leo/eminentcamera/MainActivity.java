@@ -1,21 +1,22 @@
 package com.implement.leo.eminentcamera;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-import android.view.Surface;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
 import com.eminent.usb.UsbCameraAdaptor;
 import com.serenegiant.common.BaseActivity;
-import com.serenegiant.usb.USBMonitor;
-import com.serenegiant.usb.UVCCamera;
 
+// the package of IR camera control and widget to display
 import com.eminent.usb.a3d.A3DAdaptor;
 import com.eminent.widget.SimpleCameraTextureView;
 
@@ -23,17 +24,11 @@ import java.nio.ByteBuffer;
 
 public final class MainActivity extends BaseActivity implements UsbCameraAdaptor.FrameProcessor {
     private final Object mSync = new Object();
-    // for accessing USB and USB camera
-    private USBMonitor mUSBMonitor;
-    private UVCCamera mUVCCamera;
-    private SimpleCameraTextureView mUVCCameraView;
-    // for open&start / stop&close camera preview
-    private ImageButton mCameraButton;
-    private Surface mPreviewSurface;
-    private SeekBar mSbIntT;
-
-    private A3DAdaptor mA3dAdaptor;
-
+    private ImageButton mCameraButton;              // open camera stream
+    private A3DAdaptor mA3dAdaptor;                 // for accessing USB and USB camera
+    private SimpleCameraTextureView mUVCCameraView; // preview camera stream
+    private ImageView mImgView;                     // display processed image (processImageFrame)
+    private SeekBar mSbIntT;                        // UI to adjust camera integration time
 
 
     @Override
@@ -43,7 +38,10 @@ public final class MainActivity extends BaseActivity implements UsbCameraAdaptor
 
         mCameraButton = findViewById(R.id.cameraButton);
         mCameraButton.setOnClickListener(mOnClickListener);
+        mImgView = findViewById(R.id.imgView);
         mUVCCameraView = findViewById(R.id.simpleCameraView);
+        mUVCCameraView.setAlpha((float)0.0);
+        mA3dAdaptor = new A3DAdaptor(this, this.getUsbManager(), this.getUVCCameraTextureView(), this);
         mSbIntT = findViewById(R.id.sbIntT);
         mSbIntT.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -64,8 +62,6 @@ public final class MainActivity extends BaseActivity implements UsbCameraAdaptor
 
             }
         });
-
-        mA3dAdaptor = new A3DAdaptor(this, this.getUsbManager(), this.getUVCCameraTextureView(), this);
 
     }
 
@@ -121,6 +117,7 @@ public final class MainActivity extends BaseActivity implements UsbCameraAdaptor
         @Override
         public void onClick(final View view) {
             synchronized (mSync) {
+                // request permission to access camera and to start.
                 if ( mA3dAdaptor.requestDevicePermission( R.xml.device_filter ) ) {
                     Toast.makeText( MainActivity.this, "USB START", Toast.LENGTH_SHORT ).show();
                 }
@@ -128,9 +125,21 @@ public final class MainActivity extends BaseActivity implements UsbCameraAdaptor
         }
     };
 
+    private Bitmap mFrameBitmap = Bitmap.createBitmap( 144, 144, Bitmap.Config.ARGB_8888 );
+
+    // Implement the Interface "UsbCameraAdaptor.FrameProcessor"
     @Override
     public void processImageFrame( ByteBuffer frame ) {
-        // TODO: 2018/9/7  
+        // do some image processing or  implement algorithm here
+        mFrameBitmap.copyPixelsFromBuffer( frame );        // don't forget to initialize m_frame_bitmap
+
+        // use View.post to do UI operating
+        mImgView.post(new Runnable() {
+            @Override
+            public void run() {
+                mImgView.setImageBitmap(RotateBitmap(mFrameBitmap, 90, true));
+            }
+        });
 
 
     }
@@ -161,5 +170,18 @@ public final class MainActivity extends BaseActivity implements UsbCameraAdaptor
 
     public A3DAdaptor getA3DAdaptor() {
         return mA3dAdaptor;
+    }
+
+    private static Bitmap RotateBitmap(Bitmap source, float angle, boolean flip ) {
+        Matrix matrix = new Matrix();
+        if ( flip ) {
+            matrix.setScale( -1, 1 );
+            matrix.postTranslate( source.getWidth(), 0 );
+            matrix.postRotate( angle * -1 );
+        } else {
+            matrix.postRotate( angle );
+        }
+
+        return Bitmap.createBitmap( source, 0, 0, source.getWidth(), source.getHeight(), matrix, true );
     }
 }
