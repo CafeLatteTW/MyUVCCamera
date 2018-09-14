@@ -5,7 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-import android.view.Surface;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -25,12 +24,11 @@ import java.nio.ByteBuffer;
 
 public final class MainActivity extends BaseActivity implements UsbCameraAdaptor.FrameProcessor {
     private final Object mSync = new Object();
-    private ImageButton mCameraButton;
-    private ImageView mImgView;
-    // for accessing USB and USB camera
-    private A3DAdaptor mA3dAdaptor;
-    private SimpleCameraTextureView mUVCCameraView;
-    private SeekBar mSbIntT;
+    private ImageButton mCameraButton;              // open camera stream
+    private A3DAdaptor mA3dAdaptor;                 // for accessing USB and USB camera
+    private SimpleCameraTextureView mUVCCameraView; // preview camera stream
+    private ImageView mImgView;                     // display processed image (processImageFrame)
+    private SeekBar mSbIntT;                        // UI to adjust camera integration time
 
 
     @Override
@@ -42,6 +40,7 @@ public final class MainActivity extends BaseActivity implements UsbCameraAdaptor
         mCameraButton.setOnClickListener(mOnClickListener);
         mImgView = findViewById(R.id.imgView);
         mUVCCameraView = findViewById(R.id.simpleCameraView);
+        mUVCCameraView.setAlpha((float)0.0);
         mA3dAdaptor = new A3DAdaptor(this, this.getUsbManager(), this.getUVCCameraTextureView(), this);
         mSbIntT = findViewById(R.id.sbIntT);
         mSbIntT.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -118,6 +117,7 @@ public final class MainActivity extends BaseActivity implements UsbCameraAdaptor
         @Override
         public void onClick(final View view) {
             synchronized (mSync) {
+                // request permission to access camera and to start.
                 if ( mA3dAdaptor.requestDevicePermission( R.xml.device_filter ) ) {
                     Toast.makeText( MainActivity.this, "USB START", Toast.LENGTH_SHORT ).show();
                 }
